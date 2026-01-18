@@ -1,0 +1,30 @@
+{
+  "name": "minicloud",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "sass resources/scss/app/_index.scss public/css/app.css",
+    "build:bulma": "sass --load-path=node_modules resources/scss/bulma/_index.scss public/css/bulma-custom.css",
+    "build:shoelace": "vite build",
+    "build": "npm run build:shoelace && npm run build:css && npm run build:bulma",
+    "dev": "php -S localhost:8080 -t public",
+    "dev:client": "vite"
+  },
+  "keywords": [],
+  "author": "Aaso KOKUBO",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "sass": "^1.97.2",
+    "vite": "^7.3.1",
+    "vite-plugin-static-copy": "^3.1.4"
+  },
+  "dependencies": {
+    "@iconify-json/vscode-icons": "^1.2.39",
+    "@shoelace-style/shoelace": "^2.20.1",
+    "bulma": "^1.0.4",
+    "cross-env": "^10.1.0",
+    "markdown-it": "^14.1.0"
+  }
+}

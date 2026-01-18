@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="./public/css/bulma-custom.css" />
+    <link rel="stylesheet" href="./public/css/app.css" />
+    <script type="module" src="./public/shoelace/shoelace.es.js"></script>
+    <style>
+      .section {
+        padding: 2rem;
+        background-color: #f9f9f9;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        text-align: center;
+      }
+
+      .title {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+        color: #333;
+      }
+
+      .icon-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 1.5rem;
+        justify-items: center;
+        align-items: center;
+      }
+
+      .icon-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.9rem;
+        color: #555;
+        transition: transform 0.2s ease;
+      }
+
+      .icon-item:hover {
+        transform: scale(1.1);
+        color: #007acc;
+      }
+
+      sl-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        color: #444;
+      }
+    </style>
+
+    <script type="module">
+      import {
+        setBasePath,
+        registerIconLibrary,
+      } from "./public/shoelace/shoelace.es.js";
+      setBasePath("./public/shoelace/");
+
+      registerIconLibrary("vscode", {
+        resolver: (name) => `./public/icons/vscode/file_type_${name}.svg`,
+      });
+    </script>
+  </head>
+  <body>
+    <div class="section">
+      <sl-input placeholder="検索..." clearable size="small">
+        <sl-icon slot="prefix" name="search" size="small"></sl-icon>
+      </sl-input>
+
+      <div class="container">
+        <h1 class="title">VSCode File Icons</h1>
+        <div class="icon-grid">
+          <div class="icon-item">
+            <sl-icon library="vscode" name="pdf"></sl-icon>
+            <div>pdf</div>
+          </div>
+          <div class="icon-item">
+            <sl-icon library="vscode" name="image"></sl-icon>
+            <div>image</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

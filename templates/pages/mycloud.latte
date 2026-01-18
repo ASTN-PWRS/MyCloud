@@ -1,0 +1,76 @@
+{layout '../layouts/base.latte'}
+
+{block title}MyCloud{/block}
+{block head}{/block}
+{block nav}
+<nav class="navbar is-primary" role="navigation" aria-label="main navigation">
+  <div class="navbar-menu"> 
+    <div class="navbar-start"> 
+      {* <a class="navbar-item">メニュー</a>  *}
+    </div> 
+    <div class="navbar-item is-expanded is-justify-content-center">
+  <div class="navbar-brand"> 
+    <a class="navbar-item" href="/"> <strong>MyCloud</strong> </a> 
+  </div> 
+    </div> 
+    <div class="navbar-end"> 
+      <a class="navbar-item">🔔 通知</a> 
+      <a class="navbar-item">👤 アカウント</a> 
+    </div> 
+  </div>
+</nav>
+{/block}
+{block content}
+  <section>
+  <div class="has-background-primary p-2" style="display: flex; align-items: center; justify-content: space-between;">
+  <!-- 左側：タイトルとアイコン -->
+  <div class="is-flex is-align-items-center" style="gap: 0.5rem;">
+  </div>
+  <div> 
+    <sl-input placeholder="検索..." clearable size="small"> 
+      <sl-icon slot="prefix" name="search" size="small"></sl-icon> 
+    </sl-input>
+  </div>  
+  <!-- 右側：ツールアイコン -->
+  <div class="is-flex is-align-items-center" style="gap: 0.5rem;">
+    <sl-icon-button name="gear" label="設定"></sl-icon-button>
+  </div>
+  </div>
+    <div class="container" style="border:1px solid grey">
+      <div class="icon-grid">
+      {foreach $folders as $folder}
+        <div class="icon-item">
+          <sl-icon-button
+            name="folder"
+            label="{$folder->name}"
+            onclick="location.href = '/folders/{$currentPath}/{$folder->name}'">
+          </sl-icon-button>
+          <div>{$folder->name}</div>
+        </div>
+      {/foreach}
+      {foreach $files as $file}
+  <div class="icon-item" oncontextmenu="showProperties(event, '{$file->logical_name}', {$file->versions|json_encode|noescape})">
+    <sl-icon-button
+      name="{getIconName($file->versions[0]->mime_type)}"
+      label="{$file->logical_name}"
+      onclick="location.href = '/view/{$file->versions[0]->id}'">
+    </sl-icon-button>
+    <div>{$file->logical_name}</div>
+  </div>
+{/foreach}
+      </div>
+    </div>
+  </section>
+{/block}
+{block content}
+<script>
+  function showProperties(event, name, versions) {
+    event.preventDefault();
+    const latest = versions[0];
+    const versionList = versions.map(v =>
+      `v${v.version} - ${v.size} bytes - ${new Date(v.uploaded_at).toLocaleString()}`
+    ).join('\n');
+    alert(`📄 ${name}\n\nVersions:\n${versionList}`);
+  }
+</script>
+{/block}

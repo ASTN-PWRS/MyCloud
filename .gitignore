@@ -1,0 +1,11 @@
+.env
+.env.development
+node_modules
+vendor
+composer.lock
+var/cache/*.*
+var/logs/*.*
+!var/cache
+!var/logs
+
+

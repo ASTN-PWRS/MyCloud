@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>{block title}My mini-cloud{/block}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{$_ENV['BASE_PATH']}/css/bulma-custom.css">
+  <link rel="stylesheet" href="{$_ENV['BASE_PATH']}/css/app.css">
+  <script type="module" src="{$_ENV['BASE_PATH']}/shoelace/shoelace.es.js"></script>
+  {block head}{/block}
+</head>
+<body>
+  {block leftDrawer}
+  {/block}
+  {block rightDrawer}
+  {/block}
+  <main>
+    {block nav}
+    {/block}
+    {block content}
+    {/block}
+  </main>
+  </section>
+  {block scripts}{/block}
+</body>
+</html>

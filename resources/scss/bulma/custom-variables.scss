@@ -1,0 +1,19 @@
+$primary: light-dark(--sl-color-primary-500, --sl-color-primary-100);
+$info: light-dark(--sl-color-info-500, --sl-color-info-100);
+$success: light-dark(--sl-color-success-50, --sl-color-success-100);
+$warning: light-dark(--sl-color-warning-50, --sl-color-warning-100);
+$danger: light-dark(--sl-color-danger-50, --sl-color-danger-100);
+$light: var(--sl-color-neutral-100);
+$dark: var(--sl-color-neutral-0);
+
+// Typography
+$size-1: var(--h1-size) !default;
+$size-2: var(--h2-size) !default;
+$size-3: var(--h3-size) !default;
+$size-4: var(--h4-size) !default;
+$size-5: var(--h5-size) !default;
+$size-6: var(--h6-size) !default;
+$size-7: var(--h7-size) !default;
+
+$family-sans-serif: var(--family-sans-serif) !default;
+$family-monospace: var(--family-monospace) !default;
