@@ -3,6 +3,8 @@
 node_modules
 vendor
 composer.lock
+public/shoelace
+
 var/cache/*.*
 var/logs/*.*
 !var/cache

@@ -22,7 +22,7 @@ return array_merge(
       { 
         $app->setBasePath($_ENV['BASE_PATH']); 
       } else {
-        $_ENV['BASE_PATH'] = '.';
+        $_ENV['BASE_PATH'] = '';
       }
       // ルーティングを読み込む 
       (require __DIR__.'/routes/web.php')($app); 

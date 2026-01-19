@@ -34,7 +34,8 @@
   </div>  
   <!-- 右側：ツールアイコン -->
   <div class="is-flex is-align-items-center" style="gap: 0.5rem;">
-    <sl-icon-button name="gear" label="設定"></sl-icon-button>
+    <sl-icon-button name="folder-plus" label="フォルダ作成" id="create-folder-btn"></sl-icon-button>
+    <sl-icon-button name="trash" label="削除"></sl-icon-button>
   </div>
   </div>
     <div class="container" style="border:1px solid grey">
@@ -62,8 +63,21 @@
       </div>
     </div>
   </section>
+  <!-- ダイアログ --> 
+<sl-dialog label="新しいフォルダを作成" id="folder-dialog">
+  <sl-input 
+    id="folder-name" 
+    label="フォルダ名を入力" 
+    placeholder="例: 新しいフォルダ" 
+    help-text="" 
+    pill 
+    clearable>
+  </sl-input>
+  <sl-button slot="footer" variant="primary" id="create-btn">作成</sl-button>
+  <sl-button slot="footer" variant="text" id="cancel-btn">キャンセル</sl-button>
+</sl-dialog>
 {/block}
-{block script}
+{block scripts}
 <script n:syntax="off">
   function showProperties(event, name, versions) {
     event.preventDefault();
@@ -74,4 +88,50 @@
     alert(`📄 ${name}\n\nVersions:\n${versionList}`);
   }
 </script>
+<script n:syntax="off">
+document.addEventListener('DOMContentLoaded', async () => {
+  const dialog = document.getElementById('folder-dialog');
+  const openBtn = document.getElementById('create-folder-btn');
+  const cancelBtn = document.getElementById('cancel-btn');
+  const createBtn = document.getElementById('create-btn');
+  const input = document.getElementById('folder-name');
+  const forbiddenChars = /[<>:"/\\|?*]/;
+
+  openBtn.addEventListener('click', () => {
+    console.log("c")
+    input.value = '';
+    input.setAttribute('help-text', '');
+    input.removeAttribute('variant');
+    dialog.show();
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    dialog.hide();
+  });
+
+  createBtn.addEventListener('click', () => {
+    const folderName = input.value;
+
+    if (forbiddenChars.test(folderName)) {
+      input.setAttribute('help-text', 'フォルダ名に使用できない文字が含まれています: < > : " / \\ | ? *');
+      input.setAttribute('variant', 'danger');
+    } else if (folderName.trim() === '') {
+      input.setAttribute('help-text', 'フォルダ名を入力してください。');
+      input.setAttribute('variant', 'danger');
+    } else {
+      console.log('作成するフォルダ名:', folderName);
+      input.setAttribute('help-text', '');
+      input.removeAttribute('variant');
+      dialog.hide();
+    }
+  });
+  // ⌨️ Enterキーで作成ボタンを押す 
+  input.addEventListener('keydown', (event) => { 
+    if (event.key === 'Enter') { 
+      createBtn.click(); 
+    } 
+  });
+});
+</script>
+
 {/block}
