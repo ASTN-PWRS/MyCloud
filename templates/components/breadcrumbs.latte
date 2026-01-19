@@ -1,0 +1,15 @@
+<sl-breadcrumb>
+  {foreach $breadcrumbs as $i => $crumb}
+    {if $i === count($breadcrumbs) - 1}
+      <sl-breadcrumb-item>
+        <sl-icon slot="prefix" name="{$crumb['icon']}"></sl-icon>
+        {$crumb['name']}
+      </sl-breadcrumb-item>
+    {else}
+      <sl-breadcrumb-item href="{$crumb['url']}">
+        <sl-icon slot="prefix" name="{$crumb['icon']}"></sl-icon>
+        {$crumb['name']}
+      </sl-breadcrumb-item>
+    {/if}
+  {/foreach}
+</sl-breadcrumb>

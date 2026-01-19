@@ -21,6 +21,6 @@ final class Home
   {
     $this->logger->info("Home");
     $viewData = [];
-    return $this->renderer->render($response, 'pages/mycloud.latte', $viewData);    
+    return $this->renderer->render($response, 'pages/home.latte', $viewData);    
   }
 }

@@ -5,13 +5,19 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use PDO;
 
+use App\MyCloud\Traits\ResolvesFolderPath;
+
 class FolderController
 {
-  private PDO $pdo;
+  use ResolvesFolderPath;
 
-  public function __construct(PDO $pdo)
+  private PDO $pdo;
+  private $renderer;
+  
+  public function __construct(PDO $pdo, $renderer)
   {
-    $this->pdo = $pdo;
+    $this->pdo      = $pdo;
+    $this->renderer = $renderer;
   }
 
   public function create(Request $request, Response $response, $args): Response
@@ -59,41 +65,83 @@ class FolderController
   }
 
   public function list(Request $request, Response $response, array $args): Response
-{
-  $path = $args['path'] ?? '';
-  $folderId = $this->resolveFolderPath($path);
+  {
+    $path = $args['path'] ?? '';
+    $breadcrumbs = $this->buildBreadcrumbs($path);
+    
+    $folderId = $this->resolveFolderPath($path);
 
-  if ($folderId === null) {
-    return $this->error($response, 'Invalid path', 404);
+    if ($folderId === null) {
+      return $this->error($response, 'Invalid path', 404);
+    }
+
+    // フォルダ一覧
+    $stmtFolders = $this->pdo->prepare("
+      SELECT id, name
+      FROM folders
+      WHERE parent_id = :parent_id AND is_deleted = FALSE
+      ORDER BY name
+    ");
+    $stmtFolders->execute([':parent_id' => $folderId]);
+    $folders = $stmtFolders->fetchAll(PDO::FETCH_OBJ);
+
+    // ファイル一覧（全バージョン）
+    $stmtFiles = $this->pdo->prepare("
+      SELECT id, logical_name, version, mime_type, size, uploaded_at
+      FROM files
+      WHERE folder_id = :folder_id AND is_deleted = FALSE
+      ORDER BY logical_name, version DESC
+    ");
+    $stmtFiles->execute([':folder_id' => $folderId]);
+    $rawFiles = $stmtFiles->fetchAll(PDO::FETCH_OBJ);
+
+    // logical_name ごとにバージョンをまとめる
+    $files = [];
+    foreach ($rawFiles as $file) {
+      $key = $file->logical_name;
+      if (!isset($files[$key])) {
+        $files[$key] = (object)[
+          'logical_name' => $file->logical_name,
+          'versions' => []
+        ];
+      }
+      $files[$key]->versions[] = $file;
+    }
+
+    $viewData = [
+      'folders'     => $folders,
+      'files'       => array_values($files),
+      'currentPath' => $path,
+      'breadcrumbs' => $breadcrumbs
+    ];
+
+    return $this->renderer->render($response, 'pages/mycloud.latte', $viewData);
   }
 
-  // フォルダ一覧
-  $stmtFolders = $this->pdo->prepare("
-    SELECT id, name
-    FROM folders
-    WHERE parent_id = :parent_id AND is_deleted = FALSE
-    ORDER BY name
-  ");
-  $stmtFolders->execute([':parent_id' => $folderId]);
-  $folders = $stmtFolders->fetchAll();
+  private function buildBreadcrumbs(string $path): array
+  {
+    $segments = array_filter(explode('/', $path));
+    $breadcrumbs = [];
+    $accumulatedPath = '';
 
-  // ファイル一覧（全バージョン）
-  $stmtFiles = $this->pdo->prepare("
-    SELECT id, logical_name, version, mime_type, size, uploaded_at
-    FROM files
-    WHERE folder_id = :folder_id AND is_deleted = FALSE
-    ORDER BY logical_name, version DESC
-  ");
-  $stmtFiles->execute([':folder_id' => $folderId]);
-  $files = $stmtFiles->fetchAll();
+    foreach ($segments as $segment) {
+      $accumulatedPath .= ($accumulatedPath ? '/' : '') . $segment;
+      $breadcrumbs[] = [
+        'name' => $segment,
+        'url' => '/folders/' . $accumulatedPath,
+        'icon' => 'folder'
+      ];
+    }
 
-  $response->getBody()->write(json_encode([
-    'folders' => $folders,
-    'files' => $files
-  ]));
+    array_unshift($breadcrumbs, [
+      'name' => 'Home',
+      'url' => '/folders',
+      'icon' => 'house'
+    ]);
 
-  return $response->withHeader('Content-Type', 'application/json');
-}
+    return $breadcrumbs;
+  }
+
   private function error(Response $response, string $message, int $status): Response
   {
     $response->getBody()->write(json_encode(['error' => $message]));

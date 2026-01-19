@@ -1,5 +1,7 @@
 <?php
 
+use Psr\Container\ContainerInterface;
+
 return [
   \PDO::class => function (ContainerInterface $container) {
     $host = $_ENV['DB_HOST']; 
@@ -12,6 +14,6 @@ return [
       PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, 
       PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, 
     ]; 
-    return new PDO($dsn, $user, $pass, $options); 
+    return new \PDO($dsn, $user, $pass, $options); 
   }
 ];

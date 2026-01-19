@@ -14,7 +14,7 @@ final class TemplateRenderer
 		// コンポーネント関数を登録 
 		$this->engine->addFunction('renderComponent', function (string $name, array $params = [])
 		{ 
-			$componentPath = __DIR__ . "/../../templates/components/{$name}.latte";
+			$componentPath = "components/{$name}.latte";
 			// JSファイルが存在すればアセットに追加 
 			return $this->engine->renderToString($componentPath, $params); 
 		});

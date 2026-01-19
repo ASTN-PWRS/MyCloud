@@ -25,6 +25,7 @@
   <div class="has-background-primary p-2" style="display: flex; align-items: center; justify-content: space-between;">
   <!-- 左側：タイトルとアイコン -->
   <div class="is-flex is-align-items-center" style="gap: 0.5rem;">
+  {=renderComponent('breadcrumbs',['breadcrumbs' => $breadcrumbs])|noescape}
   </div>
   <div> 
     <sl-input placeholder="検索..." clearable size="small"> 
@@ -62,8 +63,8 @@
     </div>
   </section>
 {/block}
-{block content}
-<script>
+{block script}
+<script n:syntax="off">
   function showProperties(event, name, versions) {
     event.preventDefault();
     const latest = versions[0];
