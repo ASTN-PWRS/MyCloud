@@ -1,4 +1,8 @@
+<?php
 
-$app->post('/folders[/{path:.*}]', \App\Controllers\FolderController::class . ':create');
+use Slim\App;
+use App\MyCloud\FolderController;
 
-$app->get('/view/{id}', \App\Controllers\FileController::class . ':view');
+return function (App $app) {
+  $app->post('/folders[/{path:.*}]', FolderController::class . ':create');
+};

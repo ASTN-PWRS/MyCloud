@@ -22,6 +22,7 @@
 {/block}
 {block content}
   <section>
+  <div id="folder-root" data-current-path="{$currentPath}"></div>
   <div class="has-background-primary p-2" style="display: flex; align-items: center; justify-content: space-between;">
   <!-- 左側：タイトルとアイコン -->
   <div class="is-flex is-align-items-center" style="gap: 0.5rem;">
@@ -95,6 +96,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const cancelBtn = document.getElementById('cancel-btn');
   const createBtn = document.getElementById('create-btn');
   const input = document.getElementById('folder-name');
+  const root = document.getElementById('folder-root');
+  const currentPath = root.dataset.currentPath || '';
   const forbiddenChars = /[<>:"/\\|?*]/;
 
   openBtn.addEventListener('click', () => {
@@ -109,20 +112,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     dialog.hide();
   });
 
-  createBtn.addEventListener('click', () => {
-    const folderName = input.value;
+  createBtn.addEventListener('click', async () => {
+    const folderName = input.value.trim();
 
     if (forbiddenChars.test(folderName)) {
       input.setAttribute('help-text', 'フォルダ名に使用できない文字が含まれています: < > : " / \\ | ? *');
       input.setAttribute('variant', 'danger');
-    } else if (folderName.trim() === '') {
+      return;
+    }
+
+    if (!folderName) {
       input.setAttribute('help-text', 'フォルダ名を入力してください。');
       input.setAttribute('variant', 'danger');
-    } else {
-      console.log('作成するフォルダ名:', folderName);
-      input.setAttribute('help-text', '');
-      input.removeAttribute('variant');
-      dialog.hide();
+      return;
+    }
+
+    input.setAttribute('help-text', '');
+    input.removeAttribute('variant');
+    dialog.hide();
+
+    const targetPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+
+    try {
+      const res = await fetch(`/folders/${encodeURIComponent(targetPath)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: folderName })
+      });
+
+      if (res.ok) {
+        location.reload();
+      } else {
+        const data = await res.json();
+        alert(`フォルダ作成に失敗しました: ${data.error || res.statusText}`);
+      }
+    } catch (err) {
+      alert(`通信エラーが発生しました: ${err.message}`);
     }
   });
   // ⌨️ Enterキーで作成ボタンを押す 

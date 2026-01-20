@@ -7,6 +7,7 @@ use App\MyCloud\FolderController;
 return function (App $app) {
   $app->get('/', [Home::class, 'index']);
   $app->get('/folders[/{path:.*}]', FolderController::class . ':list');
+  //$app->get('/view/{id}', FileController::class . ':view');
 };
 
 
