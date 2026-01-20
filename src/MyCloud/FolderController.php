@@ -16,16 +16,18 @@ class FolderController
   private PDO $pdo;
   private $renderer;
   private $cacheManager;
-
-  public function __construct(PDO $pdo, $renderer, RedisCacheManager $cacheManager)
+  private $logger;
+  public function __construct(PDO $pdo, $renderer, RedisCacheManager $cacheManager, $logger)
   {
     $this->pdo          = $pdo;
     $this->renderer     = $renderer;
     $this->cacheManager = $cacheManager;
+    $this->logger       = $logger;
   }
 
   public function create(Request $request, Response $response, $args): Response
 {
+
   $data = $request->getParsedBody();
   $name = $data['name'] ?? null;
   $path = $args['path'] ?? '';
@@ -35,6 +37,7 @@ class FolderController
   }
 
   $parentId = $this->resolveFolderPath($path);
+  
   if ($parentId === null) {
     return $this->error($response, 'Invalid path', 404);
   }
@@ -44,11 +47,13 @@ class FolderController
     SELECT id FROM folders
     WHERE name = :name AND parent_id IS NOT DISTINCT FROM :parent_id AND is_deleted = FALSE
   ");
+
   $checkStmt->execute([
     ':name' => $name,
     ':parent_id' => $parentId
   ]);
-  if ($checkStmt->fetch()) {
+
+  if ($checkStmt->fetch(PDO::FETCH_ASSOC)) {
     return $this->error($response, 'Folder with the same name already exists', 409);
   }
 
@@ -63,7 +68,8 @@ class FolderController
     ':parent_id' => $parentId
   ]);
 
-  $folder = $stmt->fetch();
+  $folder = $stmt->fetch(PDO::FETCH_ASSOC);
+  
 
   // 🌿 キャッシュ削除（親フォルダの一覧を無効化）
   $tag = 'folder:' . $parentId;
@@ -75,6 +81,7 @@ class FolderController
 
 public function list(Request $request, Response $response, array $args): Response
 {
+  $this->logger->info("folder list");
   $path = $args['path'] ?? '';
   $folderId = $this->resolveFolderPath($path);
 
@@ -156,5 +163,11 @@ private function buildBreadcrumbs(string $path): array
 
   return $breadcrumbs;
 }
+
+  private function error(Response $response, string $message, int $status): Response
+  {
+    $response->getBody()->write(json_encode(['error' => $message]));
+    return $response->withStatus($status)->withHeader('Content-Type', 'application/json');
+  }
 
 }

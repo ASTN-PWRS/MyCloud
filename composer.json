@@ -20,10 +20,9 @@
     "slim/csrf": "^1.5",
     "vlucas/phpdotenv": "^5.6",
     "php-di/php-di": "^7.1",
-    "nyholm/psr7": "^1.8",
     "latte/latte": "^3.1",
-    "nyholm/psr7-server": "^1.1",
     "tracy/tracy": "^2.11",
-    "bryanjhv/slim-session": "^4.1"
+    "bryanjhv/slim-session": "^4.1",
+    "slim/psr7": "^1.8"
   }
 }

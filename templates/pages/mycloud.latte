@@ -46,7 +46,8 @@
           <sl-icon-button
             name="folder"
             label="{$folder->name}"
-            onclick="location.href = '/folders/{$currentPath}/{$folder->name}'">
+            data-path="{$currentPath}/{$folder->name}"
+            onclick="openFolder(event)">
           </sl-icon-button>
           <div>{$folder->name}</div>
         </div>
@@ -90,6 +91,11 @@
   }
 </script>
 <script n:syntax="off">
+  function openFolder(event) {
+  const path = event.currentTarget.dataset.path;
+  console.log('Opening folder:', path);
+  //location.href = `/folders/${path}`;
+}
 document.addEventListener('DOMContentLoaded', async () => {
   const dialog = document.getElementById('folder-dialog');
   const openBtn = document.getElementById('create-folder-btn');
@@ -114,7 +120,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   createBtn.addEventListener('click', async () => {
     const folderName = input.value.trim();
-
     if (forbiddenChars.test(folderName)) {
       input.setAttribute('help-text', 'フォルダ名に使用できない文字が含まれています: < > : " / \\ | ? *');
       input.setAttribute('variant', 'danger');
@@ -131,8 +136,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     input.removeAttribute('variant');
     dialog.hide();
 
-    const targetPath = currentPath ? `${currentPath}/${folderName}` : folderName;
-
+    const targetPath = (currentPath != '') ? `${currentPath}/${folderName}` : '';
+    console.log("targetPath",`/folders/${encodeURIComponent(targetPath)}`);
+    console.log("currentpath",currentPath,(currentPath == ''));
+    console.log("foldername",folderName);
     try {
       const res = await fetch(`/folders/${encodeURIComponent(targetPath)}`, {
         method: 'POST',
@@ -143,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       if (res.ok) {
-        location.reload();
+        //location.reload();
       } else {
         const data = await res.json();
         alert(`フォルダ作成に失敗しました: ${data.error || res.statusText}`);
@@ -158,6 +165,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       createBtn.click(); 
     } 
   });
+
+
 });
 </script>
 
