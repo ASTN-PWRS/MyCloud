@@ -18,63 +18,72 @@ class FolderController
   {
     $this->pdo      = $pdo;
     $this->renderer = $renderer;
+    //$this->cacheManager = $cacheManager;
   }
 
   public function create(Request $request, Response $response, $args): Response
-  {
-    $data = $request->getParsedBody();
-    $name = $data['name'] ?? null;
-    $path = $args['path'] ?? '';
+{
+  $data = $request->getParsedBody();
+  $name = $data['name'] ?? null;
+  $path = $args['path'] ?? '';
 
-    if (!$name) {
-      return $this->error($response, 'name is required', 400);
-    }
-
-    $parentId = $this->resolveFolderPath($path);
-    if ($parentId === null) {
-      return $this->error($response, 'Invalid path', 404);
-    }
-
-    // 同名フォルダの存在チェック
-    $checkStmt = $this->pdo->prepare("
-      SELECT id FROM folders
-      WHERE name = :name AND parent_id IS NOT DISTINCT FROM :parent_id AND is_deleted = FALSE
-    ");
-    $checkStmt->execute([
-      ':name' => $name,
-      ':parent_id' => $parentId
-    ]);
-    if ($checkStmt->fetch()) {
-      return $this->error($response, 'Folder with the same name already exists', 409);
-    }
-
-    // フォルダ作成
-    $stmt = $this->pdo->prepare("
-      INSERT INTO folders (name, parent_id)
-      VALUES (:name, :parent_id)
-      RETURNING id, name, parent_id, created_at
-    ");
-    $stmt->execute([
-      ':name' => $name,
-      ':parent_id' => $parentId
-    ]);
-
-    $folder = $stmt->fetch();
-    $response->getBody()->write(json_encode($folder));
-    return $response->withHeader('Content-Type', 'application/json');
+  if (!$name) {
+    return $this->error($response, 'name is required', 400);
   }
 
-  public function list(Request $request, Response $response, array $args): Response
-  {
-    $path = $args['path'] ?? '';
-    $breadcrumbs = $this->buildBreadcrumbs($path);
-    
-    $folderId = $this->resolveFolderPath($path);
+  $parentId = $this->resolveFolderPath($path);
+  if ($parentId === null) {
+    return $this->error($response, 'Invalid path', 404);
+  }
 
-    if ($folderId === null) {
-      return $this->error($response, 'Invalid path', 404);
-    }
+  // 同名フォルダの存在チェック
+  $checkStmt = $this->pdo->prepare("
+    SELECT id FROM folders
+    WHERE name = :name AND parent_id IS NOT DISTINCT FROM :parent_id AND is_deleted = FALSE
+  ");
+  $checkStmt->execute([
+    ':name' => $name,
+    ':parent_id' => $parentId
+  ]);
+  if ($checkStmt->fetch()) {
+    return $this->error($response, 'Folder with the same name already exists', 409);
+  }
 
+  // フォルダ作成
+  $stmt = $this->pdo->prepare("
+    INSERT INTO folders (name, parent_id)
+    VALUES (:name, :parent_id)
+    RETURNING id, name, parent_id, created_at
+  ");
+  $stmt->execute([
+    ':name' => $name,
+    ':parent_id' => $parentId
+  ]);
+
+  $folder = $stmt->fetch();
+
+  // 🌿 キャッシュ削除（親フォルダの一覧を無効化）
+  $tag = 'folder:' . $parentId;
+  $this->cacheManager->flushTag($tag);
+
+  $response->getBody()->write(json_encode($folder));
+  return $response->withHeader('Content-Type', 'application/json');
+}
+
+public function list(Request $request, Response $response, array $args): Response
+{
+  $path = $args['path'] ?? '';
+  $folderId = $this->resolveFolderPath($path);
+
+  if ($folderId === null) {
+    return $this->error($response, 'Invalid path', 404);
+  }
+
+  $cacheKey = 'folder_list:' . md5($path);
+  $tag = 'folder:' . $folderId;
+
+  // キャッシュ取得または生成
+  $viewData = $this->cacheManager->remember($cacheKey, function () use ($folderId, $path) {
     // フォルダ一覧
     $stmtFolders = $this->pdo->prepare("
       SELECT id, name
@@ -108,43 +117,17 @@ class FolderController
       $files[$key]->versions[] = $file;
     }
 
-    $viewData = [
+    return [
       'folders'     => $folders,
       'files'       => array_values($files),
       'currentPath' => $path,
-      'breadcrumbs' => $breadcrumbs
+      'breadcrumbs' => $this->buildBreadcrumbs($path)
     ];
+  }, 86400); // 1日キャッシュ
 
-    return $this->renderer->render($response, 'pages/mycloud.latte', $viewData);
-  }
+  // タグ登録（後で一括削除できるように）
+  $this->cacheManager->tag($tag, $cacheKey);
 
-  private function buildBreadcrumbs(string $path): array
-  {
-    $segments = array_filter(explode('/', $path));
-    $breadcrumbs = [];
-    $accumulatedPath = '';
-
-    foreach ($segments as $segment) {
-      $accumulatedPath .= ($accumulatedPath ? '/' : '') . $segment;
-      $breadcrumbs[] = [
-        'name' => $segment,
-        'url' => '/folders/' . $accumulatedPath,
-        'icon' => 'folder'
-      ];
-    }
-
-    array_unshift($breadcrumbs, [
-      'name' => 'Home',
-      'url' => '/folders',
-      'icon' => 'house'
-    ]);
-
-    return $breadcrumbs;
-  }
-
-  private function error(Response $response, string $message, int $status): Response
-  {
-    $response->getBody()->write(json_encode(['error' => $message]));
-    return $response->withStatus($status)->withHeader('Content-Type', 'application/json');
-  }
+  return $this->renderer->render($response, 'pages/mycloud.latte', $viewData);
+}
 }

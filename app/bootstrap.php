@@ -13,7 +13,8 @@ return array_merge(
     require __DIR__ . '/containers/psr7.php',
     require __DIR__ . '/containers/renderer.php',
     require __DIR__ . '/containers/pdo.php',
-    require __DIR__ . '/containers/web.php',    
+    require __DIR__ . '/containers/web.php',
+    require __DIR__ . '/containers/cache.php',    
   [
     // Slim\App の定義（AppFactory 経由で生成） 
     App::class => function (ContainerInterface $c) { 
