@@ -6,15 +6,16 @@ use Psr\Container\ContainerInterface;
 
 return [
   RedisCacheManager::class => function (ContainerInterface $c) {
-    $enabled = CacheConfig::useRedis();
+    $cacheConfig = $c->get(CacheConfig::class);
+    $enabled = $cacheConfig->useRedis();
 
     if (!$enabled) {
-      return new RedisCacheManager(null, CacheConfig::redisPrefix(), false);
+      return new RedisCacheManager(null, $cacheConfig->redisPrefix(), false);
     }
 
     $redis = new \Redis();
-    $redis->connect(CacheConfig::redisHost(), CacheConfig::redisPort());
+    $redis->connect($cacheConfig->redisHost(), $cacheConfig->redisPort());
 
-    return new RedisCacheManager($redis, CacheConfig::redisPrefix(), true);
+    return new RedisCacheManager($redis, $cacheConfig->redisPrefix(), true);
   },
 ];

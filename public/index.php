@@ -16,7 +16,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $envFile = getenv('APP_ENV') === 'development' ? '.env.development' : '.env';
 loadEnv(dirname(__DIR__, 1), $envFile);
-
 $container = (new ContainerBuilder())
   ->addDefinitions(dirname(__DIR__, 1) . '/app/bootstrap.php')
   ->build();

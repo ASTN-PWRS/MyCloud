@@ -4,6 +4,6 @@ use App\Config\CacheConfig;
 use App\Config\DatabaseConfig;
 
 return [
-  ChacheConfig::class => fn () =>new ChacheConfig(),
+  CacheConfig::class => fn () =>new CacheConfig(),
   DatabaseConfig::class => fn() => new DatabaseConfig(),
 ];

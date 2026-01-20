@@ -9,6 +9,7 @@ use App\Web\Home;
 return array_merge(
   ...[
     require __DIR__ . '/containers/settings.php',
+    require __DIR__ . '/containers/config.php',
     require __DIR__ . '/containers/logger.php',
     require __DIR__ . '/containers/psr7.php',
     require __DIR__ . '/containers/renderer.php',

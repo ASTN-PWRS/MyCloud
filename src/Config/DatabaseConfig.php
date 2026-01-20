@@ -6,27 +6,27 @@ class DatabaseConfig
 {
   public function host(): string
   {
-    return getenv('DB_HOST') ?: 'localhost';
+    return  $_ENV['DB_HOST'] ?: 'localhost';
   }
 
   public function port(): int
   {
-    return (int)(getenv('DB_PORT') ?: 5432);
+    return (int)($_ENV['DB_PORT'] ?: 5432);
   }
 
   public function name(): string
   {
-    return getenv('DB_NAME') ?: 'mydb';
+    return $_ENV['DB_NAME'] ?: 'mydb';
   }
 
   public function user(): string
   {
-    return getenv('DB_USER') ?: 'postgres';
+    return $_ENV['DB_USER'] ?: 'postgres';
   }
 
   public function password(): string
   {
-    return getenv('DB_PASS') ?: '';
+    return $_ENV['DB_PASS'] ?: '';
   }
 
   public function dsn(): string

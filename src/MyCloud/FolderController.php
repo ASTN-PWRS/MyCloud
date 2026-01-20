@@ -5,6 +5,8 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use PDO;
 
+use App\Cache\RedisCacheManager;
+
 use App\MyCloud\Traits\ResolvesFolderPath;
 
 class FolderController
@@ -13,12 +15,13 @@ class FolderController
 
   private PDO $pdo;
   private $renderer;
-  
-  public function __construct(PDO $pdo, $renderer)
+  private $cacheManager;
+
+  public function __construct(PDO $pdo, $renderer, RedisCacheManager $cacheManager)
   {
-    $this->pdo      = $pdo;
-    $this->renderer = $renderer;
-    //$this->cacheManager = $cacheManager;
+    $this->pdo          = $pdo;
+    $this->renderer     = $renderer;
+    $this->cacheManager = $cacheManager;
   }
 
   public function create(Request $request, Response $response, $args): Response
@@ -130,4 +133,28 @@ public function list(Request $request, Response $response, array $args): Respons
 
   return $this->renderer->render($response, 'pages/mycloud.latte', $viewData);
 }
+private function buildBreadcrumbs(string $path): array
+{
+  $segments = array_filter(explode('/', trim($path, '/')));
+  $breadcrumbs = [
+    [
+      'name' => 'ホーム',
+      'url'  => '/',
+      'icon' => 'house'
+    ]
+  ];
+
+  $url = '';
+  foreach ($segments as $segment) {
+    $url .= '/' . $segment;
+    $breadcrumbs[] = [
+      'name' => urldecode($segment),
+      'url'  => '/folders' . $url,
+      'icon' => 'folder'
+    ];
+  }
+
+  return $breadcrumbs;
+}
+
 }

@@ -6,6 +6,7 @@ use Psr\Log\LoggerInterface;
 
 use App\Web\Home;
 use App\MyCloud\FolderController;
+use App\Cache\RedisCacheManager;
 
 return [
   Home::class => function (ContainerInterface $c) { 
@@ -14,8 +15,9 @@ return [
     return new Home($renderer, $logger); 
   },
   FolderController::class => function (ContainerInterface $c) {
-    $pdo      = $c->get(PDO::class); 
+    $pdo      = $c->get(PDO::class);
     $renderer = $c->get(TemplateRenderer::class);
-    return new FolderController($pdo, $renderer);
+    $cachemanager = $c->get(RedisCacheManager::class);
+    return new FolderController($pdo, $renderer, $cachemanager);
   }
 ];
