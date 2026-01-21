@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/themes/light.css"
+    />
+    <script
+      type="module"
+      src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/shoelace.js"
+    ></script>
+  </head>
+  <body>
+    <div class="section">
+      <div class="container">
+        <div id="dropzone" class="box has-text-centered">
+          <p>📁 フォルダをここにドロップ</p>
+        </div>
+      </div>
+    </div>
+    <sl-dialog label="アップロード中" id="uploadDialog">
+      <sl-progress-bar id="progress" value="0"></sl-progress-bar>
+      <p id="progressText" style="margin-top: 1rem">0%</p>
+    </sl-dialog>
+    <script src="/js/upload.js"></script>
+  </body>
+</html>
