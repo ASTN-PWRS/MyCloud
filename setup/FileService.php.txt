@@ -1,0 +1,80 @@
+<?php
+namespace App\Services;
+
+use App\Database;
+use PDO;
+
+class FileService
+{
+    private PDO $pdo;
+
+    public function __construct()
+    {
+        $this->pdo = Database::getConnection();
+    }
+
+    /**
+     * 最新版の file 情報を取得（最速）
+     */
+    public function getLatestFile(string $fileId): ?array
+    {
+        $sql = "
+            SELECT f.*
+            FROM files f
+            WHERE f.id = :id
+            LIMIT 1
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':id' => $fileId]);
+
+        return $stmt->fetch() ?: null;
+    }
+
+    /**
+     * version 指定でファイルを取得（複合インデックスを活かす）
+     */
+    public function getFileByVersion(string $folderId, string $logicalName, int $version): ?array
+    {
+        $sql = "
+            SELECT f.*
+            FROM files f
+            WHERE f.folder_id = :folder_id
+              AND f.logical_name = :logical_name
+              AND f.version = :version
+            LIMIT 1
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':folder_id'    => $folderId,
+            ':logical_name' => $logicalName,
+            ':version'      => $version,
+        ]);
+
+        return $stmt->fetch() ?: null;
+    }
+
+    /**
+     * version 未指定で最新バージョンを取得（最速）
+     */
+    public function getLatestByFolderAndName(string $folderId, string $logicalName): ?array
+    {
+        $sql = "
+            SELECT f.*
+            FROM latest_file_links l
+            JOIN files f ON l.file_id = f.id
+            WHERE l.folder_id = :folder_id
+              AND l.logical_name = :logical_name
+            LIMIT 1
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':folder_id'    => $folderId,
+            ':logical_name' => $logicalName,
+        ]);
+
+        return $stmt->fetch() ?: null;
+    }
+}

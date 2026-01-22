@@ -1,0 +1,160 @@
+<?php
+namespace App\Controllers;
+
+use App\Services\FileService;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+
+class FileController
+{
+    private FileService $fileService;
+    private string $storagePath;
+    private array $supportedMimeTypes;
+    private $render;
+
+    public function __construct(
+        FileService $fileService,
+        string $storagePath,
+        array $supportedMimeTypes,
+        callable $render
+    ) {
+        $this->fileService        = $fileService;
+        $this->storagePath        = rtrim($storagePath, '/');
+        $this->supportedMimeTypes = $supportedMimeTypes;
+        $this->render             = $render;
+    }
+
+    public function view(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
+    {
+        $fileId = $args['file_id'];
+        $query  = $request->getQueryParams();
+
+        // 最新版取得
+        $latest = $this->fileService->getFileById($fileId);
+
+        if (!$latest) {
+            $response->getBody()->write('File not found');
+            return $response->withStatus(404);
+        }
+
+        // version 指定
+        $target = $latest;
+        $version = $latest['version'];
+
+        if (isset($query['version'])) {
+            $version = (int)$query['version'];
+
+            $old = $this->fileService->getFileByVersion(
+                $latest['folder_id'],
+                $latest['logical_name'],
+                $version
+            );
+
+            if (!$old) {
+                $response->getBody()->write('Version not found');
+                return $response->withStatus(404);
+            }
+
+            $target = $old;
+        }
+
+        // ダウンロード
+        if (isset($query['download'])) {
+            return $this->forceDownload($response, $target['id'], $query['download']);
+        }
+
+        $mime = $target['mime_type'];
+
+        // text/csv, text/markdown → Latte viewer
+        if ($mime === 'text/csv' || $mime === 'text/markdown') {
+
+            $baseUrl = $this->buildBaseUrl($request);
+            $url     = "{$baseUrl}/view/{$target['id']}?version={$version}";
+            $path    = "{$this->storagePath}/{$target['id']}";
+
+            return ($this->render)(
+                $response,
+                "pages/viewer.latte",
+                [
+                    'url'     => $url,
+                    'mime'    => $mime,
+                    'path'    => $path,
+                    'name'    => $target['logical_name'],
+                    'version' => $version,
+                ]
+            );
+        }
+
+        // Office Online 対応 MIME
+        if ($this->isOfficeOnlineSupported($mime)) {
+            $baseUrl  = $this->buildBaseUrl($request);
+            $fileUrl  = "{$baseUrl}/view/{$target['id']}?version={$version}";
+            $officeUrl = "https://view.officeapps.live.com/op/view.aspx?src=" . urlencode($fileUrl);
+
+            return $response
+                ->withHeader('Location', $officeUrl)
+                ->withStatus(302);
+        }
+
+        // 非対応 MIME → stream
+        return $this->streamFile($response, $target['id']);
+    }
+
+    private function isOfficeOnlineSupported(string $mime): bool
+    {
+        return in_array($mime, $this->supportedMimeTypes, true);
+    }
+
+    private function buildBaseUrl(ServerRequestInterface $request): string
+    {
+        $uri = $request->getUri();
+        $base = $uri->getScheme() . '://' . $uri->getHost();
+
+        $port = $uri->getPort();
+        if ($port && !in_array($port, [80, 443])) {
+            $base .= ':' . $port;
+        }
+
+        return $base;
+    }
+
+    private function streamFile(ResponseInterface $response, string $fileId): ResponseInterface
+    {
+        $filePath = "{$this->storagePath}/{$fileId}";
+
+        if (!file_exists($filePath)) {
+            $response->getBody()->write('File not found');
+            return $response->withStatus(404);
+        }
+
+        $mime = mime_content_type($filePath);
+
+        $stream = fopen($filePath, 'rb');
+        $response->getBody()->write(stream_get_contents($stream));
+        fclose($stream);
+
+        return $response
+            ->withHeader('Content-Type', $mime)
+            ->withHeader('Content-Disposition', 'inline');
+    }
+
+    private function forceDownload(ResponseInterface $response, string $fileId, string $downloadName): ResponseInterface
+    {
+        $filePath = "{$this->storagePath}/{$fileId}";
+
+        if (!file_exists($filePath)) {
+            $response->getBody()->write('File not found');
+            return $response->withStatus(404);
+        }
+
+        $mime = mime_content_type($filePath);
+
+        $stream = fopen($filePath, 'rb');
+        $response->getBody()->write(stream_get_contents($stream));
+        fclose($stream);
+
+        return $response
+            ->withHeader('Content-Type', $mime)
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $downloadName . '"');
+    }
+}

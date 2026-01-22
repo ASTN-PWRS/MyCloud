@@ -1,0 +1,80 @@
+-- UUID生成用の拡張機能を有効化（初回のみ）
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- タイムゾーン付きの updated_at を自動更新する関数
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at := CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- フォルダテーブル（論理削除・ユーザー所有・階層構造）
+DROP TABLE IF EXISTS folders CASCADE;
+CREATE TABLE folders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    parent_id UUID REFERENCES folders(id) ON DELETE CASCADE,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 論理削除されていないフォルダ名の一意性制約（親フォルダ内）
+CREATE UNIQUE INDEX folders_unique_name_per_parent_active
+ON folders (parent_id, name)
+WHERE is_deleted = false;
+
+-- フォルダ更新時の updated_at 自動更新トリガー
+CREATE TRIGGER trigger_set_updated_at_on_folders
+BEFORE UPDATE ON folders
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+-- ファイルテーブル（バージョン管理・ユーザー所有・論理削除なし）
+DROP TABLE IF EXISTS files CASCADE;
+CREATE TABLE files (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    folder_id UUID REFERENCES folders(id) ON DELETE CASCADE,
+    logical_name VARCHAR(255) NOT NULL,
+    version INTEGER NOT NULL,
+    mime_type VARCHAR(100),
+    size BIGINT,
+    uploaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 同一フォルダ内でのファイル名＋バージョンの一意性制約
+CREATE UNIQUE INDEX files_unique_name_version_per_folder
+ON files (folder_id, logical_name, version);
+
+-- ファイル更新時の updated_at 自動更新トリガー
+CREATE TRIGGER trigger_set_updated_at_on_files
+BEFORE UPDATE ON files
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+-- 最新版ファイルへのユニークリンク管理テーブル
+DROP TABLE IF EXISTS latest_file_links CASCADE;
+CREATE TABLE latest_file_links (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    folder_id UUID REFERENCES folders(id) ON DELETE CASCADE,
+    logical_name VARCHAR(255) NOT NULL,
+    file_id UUID REFERENCES files(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (folder_id, logical_name)
+);
+
+-- リンク更新時の updated_at 自動更新トリガー
+CREATE TRIGGER trigger_set_updated_at_on_latest_file_links
+BEFORE UPDATE ON latest_file_links
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+-- ルートフォルダの登録（例：ユーザーIDを仮に固定）
+INSERT INTO folders (user_id, name, parent_id)
+VALUES ('admin', '/', NULL);

@@ -1,0 +1,54 @@
+<div id="csv-container">読み込み中...</div>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<script>
+const url = "{$url}";
+const mime = "{$mime}";
+const name = "{$name}";
+const version = "{$version}";
+
+fetch(url)
+  .then(res => res.text())
+  .then(text => {
+    const parsed = Papa.parse(text, {
+      delimiter: "", // 自動判定
+      newline: "",   // 自動判定
+      comments: "#", // コメント行を保持
+      skipEmptyLines: true
+    });
+
+    const data = parsed.data;
+
+    // HTML table 生成
+    let html = `<table class="csv-table">`;
+
+    for (const row of data) {
+      if (typeof row === "string") {
+        // コメント行
+        html += `<tr class="csv-comment"><td colspan="999"># ${escapeHtml(row)}</td></tr>`;
+        continue;
+      }
+
+      html += "<tr>";
+      for (const col of row) {
+        html += `<td>${escapeHtml(col)}</td>`;
+      }
+      html += "</tr>";
+    }
+
+    html += "</table>";
+
+    document.getElementById("csv-container").innerHTML = html;
+  });
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, s => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[s]));
+}
+</script>

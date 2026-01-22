@@ -1,0 +1,35 @@
+$container->set('officeSupportedMimeTypes', function () {
+    return [
+        // Word
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-word.document.macroEnabled.12',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+        'application/vnd.ms-word.template.macroEnabled.12',
+        'application/msword',
+
+        // Excel
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel.sheet.macroEnabled.12',
+        'application/vnd.ms-excel.sheet.binary.macroEnabled.12',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
+        'application/vnd.ms-excel',
+
+        // PowerPoint
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.ms-powerpoint.presentation.macroEnabled.12',
+        'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+        'application/vnd.ms-powerpoint.slideshow.macroEnabled.12',
+        'application/vnd.ms-powerpoint',
+
+        // PDF
+        'application/pdf',
+    ];
+});
+
+$container->set(FileController::class, function ($c) {
+    return new FileController(
+        $c->get(FileService::class),
+        __DIR__ . '/../storage',
+        $c->get('officeSupportedMimeTypes')
+    );
+});

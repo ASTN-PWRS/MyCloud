@@ -25,6 +25,7 @@
     "@iconify-json/vscode-icons": "^1.2.39",
     "@shoelace-style/shoelace": "^2.20.1",
     "bulma": "^1.0.4",
-    "markdown-it": "^14.1.0"
+    "markdown-it": "^14.1.0",
+    "papaparse": "^5.5.3"
   }
 }
