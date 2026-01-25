@@ -1,0 +1,14 @@
+.folder-drop-target.drag-over {
+  background-color: #e0f7fa;
+  border: 2px dashed #00acc1;
+  border-radius: 8px;
+}
+.dragging {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.icon-item.selected {
+  outline: 2px solid var(--sl-color-primary-600);
+  background-color: var(--sl-color-primary-100);
+}

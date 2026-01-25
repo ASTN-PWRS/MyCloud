@@ -40,24 +40,40 @@
   </div>
   </div>
     <div class="container" style="border:1px solid grey">
-      <div class="icon-grid">
+      <div class="icon-grid"
+        data-folder-path="{$currentPath}"
+      >
       {foreach $folders as $folder}
-        <div class="icon-item">
+        <div 
+          class="icon-item" 
+          draggable="true"
+          data-type="folder"
+          data-folder-name="{$folder->name}"
+          data-folder-path="{$currentPath}/{$folder->name}"
+          onclick="openFolder(event)"
+        >
           <sl-icon-button
             name="folder"
             label="{$folder->name}"
-            data-path="{$currentPath}/{$folder->name}"
-            onclick="openFolder(event)">
+            draggable="false"
+            >
           </sl-icon-button>
           <div>{$folder->name}</div>
         </div>
       {/foreach}
       {foreach $files as $file}
-  <div class="icon-item" oncontextmenu="showProperties(event, '{$file->logical_name}', {$file->versions|json_encode|noescape})">
+  <div 
+    class="icon-item"
+    draggable="true"
+    data-type="file"
+    data-file-name="{$file->logical_name}"
+    onclick="location.href = '/view/{$file->versions[0]->id}'"
+  >
     <sl-icon-button
       name="{getIconName($file->versions[0]->mime_type)}"
       label="{$file->logical_name}"
-      onclick="location.href = '/view/{$file->versions[0]->id}'">
+       draggable="false"
+      >
     </sl-icon-button>
     <div>{$file->logical_name}</div>
   </div>
@@ -65,6 +81,8 @@
       </div>
     </div>
   </section>
+ {=renderComponent('overlay',[])|noescape}
+ <loading-overlay id="global-overlay"></loading-overlay>
   <!-- ダイアログ --> 
 <sl-dialog label="新しいフォルダを作成" id="folder-dialog">
   <sl-input 
@@ -97,6 +115,7 @@
   //location.href = `/folders/${path}`;
 }
 document.addEventListener('DOMContentLoaded', async () => {
+  new ItemMove(".icon-grid");
   const dialog = document.getElementById('folder-dialog');
   const openBtn = document.getElementById('create-folder-btn');
   const cancelBtn = document.getElementById('cancel-btn');
@@ -169,5 +188,199 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 });
 </script>
+<script>
+//new ItemMove(".icon-grid");
+class ItemMove {
+  constructor(containerSelector = ".icon-grid") {
+    this.container = document.querySelector(containerSelector);
+    if (!this.container) {
+      console.warn("📦 指定されたコンテナが見つかりません:", containerSelector);
+      return;
+    }
 
+    this.dialog = document.getElementById("overlay-dialog");
+    this.dialogMessage = document.getElementById("overlay-message");
+
+    this.prepareDraggableClasses();
+    this.bindDraggables();
+    this.bindDropTargets();
+  }
+
+  showOverlay(message = "処理中です…") {
+    if (this.dialog && this.dialogMessage) {
+      this.dialogMessage.textContent = message;
+      this.dialog.show();
+    }
+  }
+
+  hideOverlay(delay = 0) {
+    if (this.dialog) {
+      setTimeout(() => {
+        this.dialog.hide();
+      }, delay);
+    }
+  }
+
+  prepareDraggableClasses() {
+    const items = this.container.querySelectorAll(".icon-item");
+
+    items.forEach(el => {
+      const type = el.dataset.type;
+      if (type === "folder") {
+        el.classList.add("folder-draggable", "folder-drop-target");
+        el.setAttribute("draggable", "true");
+      } else if (type === "file") {
+        el.classList.add("file-draggable");
+        el.setAttribute("draggable", "true");
+      }
+    });
+  }
+
+  bindDraggables() {
+    const draggables = this.container.querySelectorAll(".file-draggable, .folder-draggable");
+
+    draggables.forEach(el => {
+      el.addEventListener("dragstart", event => {
+        const type = el.dataset.type;
+        const name = type === "file" ? el.dataset.fileName : el.dataset.folderName;
+
+        if (!type || !name) {
+          console.warn("ドラッグ対象に必要なデータ属性がありません", el);
+          return;
+        }
+
+        const payload = JSON.stringify({ type, name });
+        event.dataTransfer.setData("text/plain", payload);
+        event.dataTransfer.effectAllowed = "move";
+      });
+    });
+  }
+
+  bindDropTargets() {
+    const targets = this.container.querySelectorAll(".folder-drop-target");
+
+    targets.forEach(folderEl => {
+      folderEl.addEventListener("dragover", event => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+      });
+
+      folderEl.addEventListener("dragenter", () => {
+        folderEl.classList.add("drag-over");
+      });
+
+      folderEl.addEventListener("dragleave", () => {
+        folderEl.classList.remove("drag-over");
+      });
+
+      folderEl.addEventListener("drop", event => {
+        event.preventDefault();
+        folderEl.classList.remove("drag-over");
+
+        this.showOverlay("移動中…");
+
+        try {
+          const raw = event.dataTransfer.getData("text/plain");
+          if (!raw) throw new Error("ドロップデータが空です");
+
+          const data = JSON.parse(raw);
+          const { type: draggedType, name: draggedName } = data;
+          const targetPath = folderEl.dataset.folderPath;
+          const targetName = folderEl.dataset.folderName;
+
+          if (!draggedType || !draggedName || !targetPath) {
+            throw new Error("ドロップ先またはドラッグ元の情報が不足しています");
+          }
+
+          if (draggedType === "file") {
+            this.moveItem("file", draggedName, targetPath);
+          } else if (draggedType === "folder" && draggedName !== targetName) {
+            this.moveItem("folder", draggedName, targetPath);
+          } else {
+            this.showOverlay("⚠️ 無効なドロップ操作です");
+            this.hideOverlay(2000);
+          }
+        } catch (err) {
+          console.warn("⚠️ ドロップ処理中にエラー:", err);
+          this.showOverlay("⚠️ エラーが発生しました");
+          this.hideOverlay(2000);
+        }
+      });
+    });
+  }
+
+  moveItem(type, name, destinationPath) {
+    console.log("📦 moveItem called:", { type, name, destinationPath });
+
+    fetch('/move-item', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, name, destination: destinationPath })
+    }).then(res => {
+      if (res.ok) {
+        location.reload();
+      } else {
+        this.showOverlay("⚠️ 移動に失敗しました");
+        this.hideOverlay(2000);
+      }
+    }).catch(err => {
+      console.error("❌ 通信エラー:", err);
+      this.showOverlay("⚠️ 通信エラーが発生しました");
+      this.hideOverlay(2000);
+    });
+  }
+}
+
+
+</script>
+<script>
+{* const overlay = document.getElementById("global-overlay");
+
+overlay.show("移動中…");
+
+// エラー時
+overlay.show("⚠️ エラーが発生しました");
+overlay.hide(2000); *}
+
+class LoadingOverlay extends HTMLElement {
+  constructor() {
+    super();
+    const shadow = this.attachShadow({ mode: 'open' });
+
+    shadow.innerHTML = `
+      <style>
+        sl-dialog::part(panel) {
+          background: rgba(255, 255, 255, 0.9);
+          box-shadow: none;
+          border: none;
+        }
+      </style>
+      <sl-dialog id="dialog" no-header no-footer open>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1em;">
+          <sl-spinner style="font-size: 2rem;"></sl-spinner>
+          <div id="message">処理中です…</div>
+        </div>
+      </sl-dialog>
+    `;
+  }
+
+  show(message = "処理中です…") {
+    const dialog = this.shadowRoot.getElementById("dialog");
+    const msg = this.shadowRoot.getElementById("message");
+    if (dialog && msg) {
+      msg.textContent = message;
+      dialog.show();
+    }
+  }
+
+  hide(delay = 0) {
+    const dialog = this.shadowRoot.getElementById("dialog");
+    if (dialog) {
+      setTimeout(() => dialog.hide(), delay);
+    }
+  }
+}
+
+customElements.define('loading-overlay', LoadingOverlay);
+</script>
 {/block}
