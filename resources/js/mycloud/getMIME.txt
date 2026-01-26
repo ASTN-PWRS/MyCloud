@@ -1,0 +1,11 @@
+function normalizeMarkdownMime(file) {
+  const originalType = file.type;
+  const name = file.name || '';
+  const isMarkdownExt = name.toLowerCase().endsWith('.md');
+
+  if (originalType === 'text/plain' && isMarkdownExt) {
+    return 'text/markdown';
+  }
+
+  return originalType || 'application/octet-stream';
+}
