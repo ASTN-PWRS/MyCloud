@@ -1,17 +1,86 @@
-// new ItemMove(".icon-grid", {
-//   itemSelector: ".icon-item",
-//   moveItem: ({ type, name, destination, element, targetFolder }) => {
-//     console.log("外部moveItem:", { type, name, destination, element, targetFolder });
-//     // カスタム処理を書く
-//     // 例: アニメーション、API呼び出し、ログ記録など
-//   }
-// });
-// const mover = new ItemMove(".icon-grid", {
-//   itemSelector: ".icon-item",
-//   moveItem: moveItemHandler,
-// });
-
-class ItemMove {
+/**
+ * DragandDropManager クラス
+ * ---------------------------------------------
+ * 画面上のアイコン（ファイル・フォルダ）のドラッグ移動と、
+ * 外部ファイルのフォルダへのドロップ処理を管理するユーティリティ。
+ *
+ * 【引数】
+ * @param {string} containerSelector
+ *   アイコンを含むコンテナ要素の CSS セレクタ
+ *   例: ".icon-grid"
+ *
+ * @param {object} options
+ *   設定オブジェクト
+ *
+ * @param {string} options.itemSelector
+ *   アイコン要素（ファイル・フォルダ）の CSS セレクタ
+ *   例: ".icon-item"
+ *
+ * @param {function} options.moveItem
+ *   内部アイコン移動時に呼ばれるコールバック
+ *   ドラッグ元 → ドロップ先フォルダへの移動処理を実装する
+ *
+ *   引数オブジェクト:
+ *     {
+ *       type: "file" | "folder",   // 移動するアイテムの種類
+ *       name: string,              // ファイル名 or フォルダ名
+ *       destination: string,       // ドロップ先フォルダのパス
+ *       element: HTMLElement,      // 移動対象の DOM 要素
+ *       targetFolder: HTMLElement  // ドロップ先フォルダの DOM 要素
+ *     }
+ *
+ * @param {function} options.dropItem
+ *   外部ファイルをフォルダにドロップしたときに呼ばれるコールバック
+ *
+ *   引数オブジェクト:
+ *     {
+ *       files: FileList,           // ドロップされた外部ファイル
+ *       targetFolder: HTMLElement, // ドロップ先フォルダの DOM 要素
+ *       destination: string        // ドロップ先フォルダのパス
+ *     }
+ *
+ * ---------------------------------------------
+ * 【呼び出し例】
+ *
+ * const mover = new ItemMove(".icon-grid", {
+ *   itemSelector: ".icon-item",
+ *
+ *   // 内部アイコン移動（フォルダ間移動）
+ *   moveItem: ({ type, name, destination, element, targetFolder }) => {
+ *     console.log("内部移動:", { type, name, destination });
+ *     // ここに API 呼び出しや UI 更新処理を書く
+ *   },
+ *
+ *   // 外部ファイルドロップ（アップロード処理）
+ *   dropItem: ({ files, destination, targetFolder }) => {
+ *     console.log("外部ファイルドロップ:", files, destination);
+ *     // ここにアップロード処理を書く
+ *   }
+ * });
+ *
+ * const mover = new ItemMove(".icon-grid", {
+ *  itemSelector: ".icon-item",
+ *
+ * // 内部アイコン移動
+ * moveItem: ({ type, name, destination }) => {
+ *   console.log("moveItem:", type, name, destination);
+ * },
+ *
+ * // 外部ファイルドロップ（何もしない）
+ * dropItem: ({ files, destination, targetFolder }) => {
+ *   // 何もしない
+ *   console.log("dropItem: 外部ファイルドロップを受け取ったが処理しません");
+ * }
+ *});
+ *
+ * ---------------------------------------------
+ * 【主な機能】
+ * - アイコン（ファイル・フォルダ）のドラッグ移動
+ * - フォルダへのドロップで移動処理を発火
+ * - 外部ファイルのドロップ検知（dropItem）
+ * - 外部ファイルドラッグ中はアイコンドラッグを無効化
+ */
+export class DragandDropManager {
   constructor(containerSelector = ".icon-grid", options = {}) {
     this.container = document.querySelector(containerSelector);
     if (!this.container) {
@@ -20,7 +89,10 @@ class ItemMove {
     }
 
     this.itemSelector = options.itemSelector || ".icon-item";
-    this.externalMoveItem = options.moveItem || null;
+    this.externalMoveItem = options.moveItem || null; // 内部移動
+    this.externalDropItem = options.dropItem || null; // 外部ファイルドロップ
+
+    this.isExternalDrag = false; // ★ 外部ファイルドラッグ中フラグ
 
     this.dialog = document.getElementById("overlay-dialog");
     if (!this.dialog) {
@@ -63,6 +135,7 @@ class ItemMove {
     this.prepareDraggableClasses();
     this.bindDraggables();
     this.bindDropTargets();
+    this.bindExternalDragDetection(); // ★ 外部ファイルドラッグ検知
   }
 
   showOverlay(message = "処理中です…") {
@@ -93,6 +166,25 @@ class ItemMove {
     });
   }
 
+  // ★ 外部ファイルドラッグ検知
+  bindExternalDragDetection() {
+    document.addEventListener("dragenter", (e) => {
+      if (e.dataTransfer?.types.includes("Files")) {
+        this.isExternalDrag = true;
+      }
+    });
+
+    document.addEventListener("dragleave", (e) => {
+      if (e.relatedTarget === null) {
+        this.isExternalDrag = false;
+      }
+    });
+
+    document.addEventListener("drop", () => {
+      this.isExternalDrag = false;
+    });
+  }
+
   bindDraggables() {
     const draggables = this.container.querySelectorAll(
       ".file-draggable, .folder-draggable",
@@ -100,6 +192,12 @@ class ItemMove {
 
     draggables.forEach((el) => {
       el.addEventListener("dragstart", (event) => {
+        // ★ 外部ファイルドラッグ中ならアイコンドラッグを無効化
+        if (this.isExternalDrag) {
+          event.preventDefault();
+          return;
+        }
+
         const type = el.dataset.type;
         const name =
           type === "file" ? el.dataset.fileName : el.dataset.folderName;
@@ -137,6 +235,21 @@ class ItemMove {
         event.preventDefault();
         folderEl.classList.remove("drag-over");
 
+        const targetPath = folderEl.dataset.folderPath;
+
+        // ★ 外部ファイルドロップ
+        if (event.dataTransfer?.files?.length > 0) {
+          if (this.externalDropItem) {
+            this.externalDropItem({
+              files: event.dataTransfer.files,
+              targetFolder: folderEl,
+              destination: targetPath,
+            });
+          }
+          return;
+        }
+
+        // ★ 内部アイコン移動
         this.showOverlay("移動中…");
 
         try {
@@ -145,8 +258,6 @@ class ItemMove {
 
           const data = JSON.parse(raw);
           const { type: draggedType, name: draggedName } = data;
-          const targetPath = folderEl.dataset.folderPath;
-          const targetName = folderEl.dataset.folderName;
 
           if (!draggedType || !draggedName || !targetPath) {
             throw new Error("ドロップ先またはドラッグ元の情報が不足しています");
@@ -162,10 +273,7 @@ class ItemMove {
             return el.dataset.type === draggedType && matchName;
           });
 
-          if (
-            this.externalMoveItem &&
-            typeof this.externalMoveItem === "function"
-          ) {
+          if (this.externalMoveItem) {
             this.externalMoveItem({
               type: draggedType,
               name: draggedName,
@@ -173,9 +281,6 @@ class ItemMove {
               element: draggedEl,
               targetFolder: folderEl,
             });
-          } else {
-            console.warn("⚠️ moveItem 関数が指定されていません");
-            this.showOverlay("⚠️ 移動処理が未定義です");
           }
         } catch (err) {
           console.warn("⚠️ ドロップ処理中にエラー:", err);

@@ -1,0 +1,12 @@
+class TreeWatcher {
+  static check() {
+    try {
+      throw new Error("Static trouble!");
+    } catch (e) {
+      console.error(`[${this.name}] エラー発生:`, e.message);
+    }
+  }
+}
+
+TreeWatcher.check();
+// → [TreeWatcher] エラー発生: Static trouble!

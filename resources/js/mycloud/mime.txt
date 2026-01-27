@@ -1,0 +1,34 @@
+function mimeToFiletype(string $mime): string {
+    $map = [
+        // 画像
+        'image/gif'         => 'filetype-gif',
+        'image/tiff'        => 'filetype-tiff',
+        'image/jpeg'        => 'filetype-jpg',
+        'image/bmp'         => 'filetype-bmp',
+        'image/png'         => 'filetype-png',
+        'image/svg+xml'     => 'filetype-svg',
+
+        // テキスト・ドキュメント
+        'text/markdown'             => 'filetype-md',
+        'application/pdf'          => 'filetype-pdf',
+        'text/plain'               => 'filetype-txt',
+        'text/tab-separated-values'=> 'filetype-csv',
+        'text/csv'                 => 'filetype-csv',
+        'application/csv'          => 'filetype-csv',
+        'application/json'         => 'filetype-json',
+        'application/x-yaml'       => 'filetype-yml',
+        'text/yaml'                => 'filetype-yml',
+        'application/sql'          => 'filetype-sql',
+        'text/x-sql'               => 'filetype-sql',
+    ];
+
+    if (isset($map[$mime])) {
+        return $map[$mime];
+    }
+
+    if (str_starts_with($mime, 'image/')) {
+        return 'file-image';
+    }
+
+    return 'file';
+}
